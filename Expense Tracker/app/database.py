@@ -25,7 +25,6 @@ class person(Base):
     def __repr__(self):
      return f"({self.ssn}), {self.firstname}, {self.lastname} ({self.gender}), {self.age})"
 
-
 class Thing(Base):
     __tablename__ = "things"
 
@@ -81,7 +80,6 @@ for r in resultsthing:
 
 
 
-
 class Expense(Base):
     __tablename__ = 'expense'
     tid = Column('tid', Integer, primary_key=True)
@@ -89,14 +87,14 @@ class Expense(Base):
     amount = Column('amount', Integer)
     owner = Column('name', Integer, ForeignKey("person.ssn"))
     def __init__(self, tid, item, amount, owner,):
-        self.name = owner
-        self.tid = tid
-        self.item = item
-        self.amount = amount
+        self.owner = Owner
+        self.tid = Tid
+        self.item = Item
+        self.amount = Amount
     def __repr__(self):
         return f"({self.tid}, {self.item}, {self.amount} -- {self.name})"
 
-Base.metadata.create_all(bind=engine)
+
 
 
 
