@@ -6,6 +6,7 @@ from sqlalchemy.engine import row
 
 Base = declarative_base()
 
+
 class person(Base):
     __tablename__ = 'person'
 
@@ -13,20 +14,17 @@ class person(Base):
     firstname = Column('firstname', String)
     lastname = Column('lastname', String)
     gender = Column('gender', CHAR)
-    age = Column('age', Integer)\
-    
-
+    age = Column('age', Integer)
     def __init__(self, ssn, firstname, lastname, gender, age):
-        self.ssn = ssn
-        self.firstname = firstname
-        self.lastname = lastname
-        self.gender = gender
-        self.age = age
+                self.ssn = ssn
+                self.firstname = firstname
+                self.lastname = lastname
+                self.gender = gender
+                self.age = age
 
-    
     def __repr__(self):
-        return f"({self.ssn}), {self.firstname}, {self.lastname} ({self.gender}), {self.age})"
-    
+     return f"({self.ssn}), {self.firstname}, {self.lastname} ({self.gender}), {self.age})"
+
 
 class Thing(Base):
     __tablename__ = "things"
@@ -42,8 +40,6 @@ class Thing(Base):
 
     def __repr__(self):
         return f"({self.tid}) {self.description} owned by {self.owner}"
-        
-
 
 
 engine = create_engine("sqlite:///database.db", echo=True)
@@ -64,14 +60,11 @@ p2 = person(545677, "Alan", "Smiles", "M", 25)
 p3 = person(755434, "Ava", "Smith", "F", 23)
 p4 = person(65432, "Maria", "sim", "F", 43)
 
-
-session.add_all([p1,p2,p3,p4])
+session.add_all([p1, p2, p3, p4])
 session.commit()
 
 results = session.query(person).all()
 print(results)
-
-
 
 t1 = Thing(1, "Car", p0.ssn)
 t2 = Thing(2, "Gaming PC", p1.ssn)
@@ -79,10 +72,34 @@ t3 = Thing(3, "20000 Student Debt", p2.ssn)
 t4 = Thing(4, "Book", p3.ssn)
 t5 = Thing(5, "A cat", p4.ssn)
 
-session.add_all([t1,t2,t3,t4,t5])
+session.add_all([t1, t2, t3, t4, t5])
 session.commit()
 
 resultsthing = session.query(Thing, person).filter(Thing.owner == person.ssn).filter(person.firstname == "Ava").all()
 for r in resultsthing:
     print(r)
+
+
+
+
+class Expense(Base):
+    __tablename__ = 'expense'
+    tid = Column('tid', Integer, primary_key=True)
+    item = Column("item", String)
+    amount = Column('amount', Integer)
+    owner = Column('name', Integer, ForeignKey("person.ssn"))
+    def __init__(self, tid, item, amount, owner,):
+        self.name = owner
+        self.tid = tid
+        self.item = item
+        self.amount = amount
+    def __repr__(self):
+        return f"({self.tid}, {self.item}, {self.amount} -- {self.name})"
+
+Base.metadata.create_all(bind=engine)
+
+
+
+
+
 
