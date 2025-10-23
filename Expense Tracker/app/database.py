@@ -88,9 +88,18 @@ for p in people:
         print(f"  - {thing.description}")
 
 
+class Category(Base):
+    __tablename__ = 'category'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True)
+    expenses = relationship("Expense", back_populates="category_rel")
+
+
 class Expense(Base):
     __tablename__ = 'expense'
     person_rel = relationship("Person", back_populates="expenses")
+    category_rel = relationship("Category", back_populates="Category_rel")
+    category_id = Column(Integer, ForeignKey("category.id"))
     tid = Column('tid', Integer, primary_key=True)
     item = Column("item", String)
     amount = Column('amount', Integer)
@@ -111,10 +120,19 @@ class Expense(Base):
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
-e1 = Expense(101, "GPU", 500, p0.ssn)
-e2 = Expense(134, "Car Window Repair", 230, p3.ssn)
-e3 = Expense(144, "Book", 230, p2.ssn)
 
+emergency = Category(name="Emergency")
+indulgence = Category(name="Indulgence")
+Study = Category(name="Study")
+
+session.add_all([emergency, indulgence, Study])
+
+e1 = Expense(101, "GPU", 500, p0.ssn)
+e1.category_rel = emergency # bros gpu broke LLLLLL
+e2 = Expense(134, "Car Window Repair", 230, p3.ssn)
+e2.category_rel = emergency
+e3 = Expense(144, "Book", 230, p2.ssn)
+e3.category_rel = indulgence
 session.add_all([e1, e2, e3])
 session.commit()
 
