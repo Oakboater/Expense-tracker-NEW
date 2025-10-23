@@ -174,3 +174,14 @@ category_totals = (
 )
 for category, total in category_totals:
     print(f"{category} spent ${total}")
+
+# ALL INFO
+user_expenses = (
+    session.query(Person.firstname, Expense.item, Expense.amount)
+    .join(Expense, Expense.owner == Person.ssn)
+    .all()
+)
+for firstname, item, amount in user_expenses:
+    print(f"{firstname} bought '{item}' for ${amount}")
+
+
