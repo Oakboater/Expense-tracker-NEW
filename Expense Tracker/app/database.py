@@ -11,7 +11,7 @@ Base = declarative_base()
 class Person(Base):
     __tablename__ = "person"
 
-    ssn = Column(Integer, primary_key=True)
+    ssn = Column(Integer, primary_key=True, autoincrement=True)
     firstname = Column(String, nullable=False)
     lastname = Column(String, nullable=False)
     gender = Column(CHAR, nullable=False)
@@ -46,7 +46,7 @@ class Category(Base):
 class Expense(Base):
     __tablename__ = "expense"
 
-    tid = Column(Integer, primary_key=True)
+    tid = Column(Integer, primary_key=True, autoincrement=True)
     item = Column(String, nullable=False)
     amount = Column(Integer, nullable=False)
     date = Column(DateTime, default=datetime.now)
@@ -61,6 +61,7 @@ class Expense(Base):
 
 
 # Database setup
+
 engine = create_engine("sqlite:///database.db", echo=False)  # Turn off echo in production
 Session = sessionmaker(bind=engine)
 session = Session()
