@@ -147,7 +147,7 @@ session.commit()
 
 # Queries
 
-info_on_all = session.query(Person, Thing, Expense).all()
+info_on_all = session.query(Person).join(Thing).join(Expense).all()
 print(info_on_all)
 
 ssn_item_expense = session.query(Expense).join(Person, Expense.owner == Person.ssn).all()
