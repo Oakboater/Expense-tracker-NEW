@@ -1,8 +1,8 @@
 from fastapi import FastAPI
-from database import session, Person, Expense, Category, Thing
+from database import session, Person, Expense
 from sqlalchemy import func
 from schemas import PersonCreate, ExpenseCreate
-from datetime import datetime
+
 
 app = FastAPI()
 
@@ -16,39 +16,6 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/")
-def read_root():
-    return {"WELCOME"}
-
-
-
-@app.post("/people")
-def create_person(person: PersonCreate):
-    new_person = Person(
-        ssn=person.ssn,
-        firstname=person.firstname,
-        lastname=person.lastname,
-        gender=person.gender,
-        age=person.age
-    )
-    session.add(new_person)
-    session.commit()
-    return {"Message": f"Person {person.firstname} added successfully"}
-
-@app.post("/expenses")
-def create_expense(expense: ExpenseCreate):
-    new_expense = Expense(
-        tid=expense.tid,
-        amount=expense.amount,
-        item=expense.item,
-        category=expense.category,
-        owner=expense.owner,
-        category_id=expense.category_id,
-        date=expense.datetime.now()
-    )
-    session.add(new_expense)
-    session.commit()
-    return {"Message": f"Expense {expense.item} added successfully"}
 
 @app.get("/")
 
@@ -80,4 +47,30 @@ def get_totals():
     )
     return [{"person": name, "total_spent": total} for name, total in totals]
 
+
+
+@app.post("/people")
+def create_person(person: PersonCreate):
+    new_person = Person(
+        firstname=person.firstname,
+        lastname=person.lastname,
+        gender=person.gender,
+        age=person.age
+    )
+    session.add(new_person)
+    session.commit()
+    return {"Message": f"Person {person.firstname} added successfully"}
+
+@app.post("/expenses")
+def create_expense(expense: ExpenseCreate):
+    new_expense = Expense(
+        amount=expense.amount,
+        item=expense.item,
+        owner=expense.owner,
+        category_id=expense.category_id,
+        date=expense.datetime.now() or expense.date
+    )
+    session.add(new_expense)
+    session.commit()
+    return {"Message": f"Expense {expense.item} added successfully"}
 
