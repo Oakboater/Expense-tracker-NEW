@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import Any
 from sqlalchemy import create_engine, ForeignKey, Column, Integer, String, CHAR, DateTime
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 # SETUP
 Base = declarative_base()
@@ -16,9 +17,19 @@ class Person(Base):
     lastname = Column(String, nullable=False)
     gender = Column(CHAR, nullable=False)
     age = Column(Integer, nullable=False)
+    password_hash = Column(String, nullable=False)
+
 
     expenses = relationship("Expense", back_populates="person_rel")
     things = relationship("Thing", back_populates="owner_rel")
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+
+    def check_password(self, password: str):
+        return check_password_hash(self.password_hash, password)
+
 
     def __repr__(self):
         return f"Person(ssn={self.ssn}, name={self.firstname} {self.lastname})"
