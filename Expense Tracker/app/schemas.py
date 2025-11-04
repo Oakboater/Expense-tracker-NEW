@@ -4,11 +4,12 @@ from typing import Optional
 
 # Person schema
 class PersonCreate(BaseModel):
-    ssn: int
     firstname: str
     lastname: str
     gender: str
     age: int
+    password: str
+
 
 # Expense schema
 
