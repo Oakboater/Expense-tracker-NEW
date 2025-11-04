@@ -1,8 +1,8 @@
 from fastapi import FastAPI
-from database import session, Person, Expense
+from .database import session, Person, Expense
+from .schemas import PersonCreate, ExpenseCreate
 from sqlalchemy import func
-from schemas import PersonCreate, ExpenseCreate
-
+from datetime import datetime
 
 app = FastAPI()
 
@@ -51,12 +51,21 @@ def get_totals():
 
 @app.post("/people")
 def create_person(person: PersonCreate):
+    existing_user = session.query(Person).filter(
+        Person.firstname == person.firstname,
+        Person.lastname == person.lastname
+    ).first()
+
+    if existing_user:
+        return {"Error": "User already exists"}
+
     new_person = Person(
         firstname=person.firstname,
         lastname=person.lastname,
         gender=person.gender,
         age=person.age
     )
+    new_person.set_password(person.password)
     session.add(new_person)
     session.commit()
     return {"Message": f"Person {person.firstname} added successfully"}
@@ -68,7 +77,7 @@ def create_expense(expense: ExpenseCreate):
         item=expense.item,
         owner=expense.owner,
         category_id=expense.category_id,
-        date=expense.datetime.now() or expense.date
+        date=datetime.now() or expense.date
     )
     session.add(new_expense)
     session.commit()
