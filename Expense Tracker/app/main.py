@@ -4,6 +4,7 @@ from .schemas import PersonCreate, ExpenseCreate
 from sqlalchemy import func
 from datetime import datetime
 
+# RUN DATABASE WITH uvicorn app.main:app --reload
 app = FastAPI()
 
 
@@ -40,13 +41,28 @@ def get_people():
 @app.get("/totals")
 def get_totals():
     totals = (
-        session.query(Person.firstname, func.sum(Expense.amount))
+        session.query(Person.firstname, func.sum(Expense.cost))
         .join(Expense, Expense.owner == Person.ssn)
         .group_by(Person.firstname)
         .all()
     )
     return [{"person": name, "total_spent": total} for name, total in totals]
 
+
+@app.get("/expenses/{user_id}")
+def get_expense(user_id: int):
+    expense = session.query(Expense).filter(Expense.owner == user_id).all()
+
+    return [
+        {
+        "Item": e.item,
+        "Cost": e.cost,
+        "date": e.date,
+        "category": e.category_rel.name if e.category_rel else None,
+        "category_id": e.category_id
+        }
+        for e in expense
+    ]
 
 
 @app.post("/people")
@@ -73,7 +89,7 @@ def create_person(person: PersonCreate):
 @app.post("/expenses")
 def create_expense(expense: ExpenseCreate):
     new_expense = Expense(
-        amount=expense.amount,
+        cost=expense.cost,
         item=expense.item,
         owner=expense.owner,
         category_id=expense.category_id,
