@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import FastAPI, Depends
-from .database import session, Person, Expense
+from .database import session, Person, Expense, Category
 from .schemas import PersonCreate, ExpenseCreate, ExpenseOut
 from sqlalchemy import func
 from datetime import datetime
@@ -42,16 +42,8 @@ def get_people(db: session = Depends(get_db)):
 
 @app.get("/expenses/{user_id}", response_model=List[ExpenseOut])
 def get_expense(user_id: int, db: session = Depends(get_db)):
-    expense = db.query(Expense).filter(Expense.owner == user_id).all()
-    return [
-        {
-        "Item": e.item,
-        "Cost": e.cost,
-        "date": e.date,
-        "category":e.category,
-        }
-        for e in expense
-    ]
+    expense_list = db.query(Expense).filter(Expense.owner == user_id).all()
+    return expense_list
 
 
 @app.post("/people")
@@ -77,6 +69,16 @@ def create_person(person: PersonCreate, db: session = Depends(get_db)):
 
 @app.post("/expenses")
 def create_expense(expense: ExpenseCreate, db: session = Depends(get_db)):
+    existing_category = db.query(Category).filter(
+        Category.name == expense.category,
+        Category.owner == expense.owner
+    ).first()
+
+    if not existing_category:
+        category = Category(name=expense.category, owner=expense.owner)
+        db.add(category)
+        db.commit()
+
     new_expense = Expense(
         cost=expense.cost,
         item=expense.item,
@@ -84,6 +86,7 @@ def create_expense(expense: ExpenseCreate, db: session = Depends(get_db)):
         category=expense.category,
         date=expense.date or datetime.now()
     )
+
     db.add(new_expense)
     db.commit()
     return {"Message": f"Expense {expense.item} added successfully"}
