@@ -39,6 +39,9 @@ class Category(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
+    owner = Column(Integer, ForeignKey("person.ssn"))
+
+    expenses = relationship("Expense", back_populates="category_rel")
 
 class Expense(Base):
     __tablename__ = "expense"
@@ -49,12 +52,14 @@ class Expense(Base):
     date = Column(DateTime, default=datetime.now)
     owner = Column(Integer, ForeignKey("person.ssn"))
     category = Column(String)
-
     person_rel = relationship("Person", back_populates="expenses")
 
 
     def __repr__(self):
         return f"Expense(tid={self.tid}, item={self.item}, cost={self.cost}, owner={self.owner})"
+    
+
+
 
 
 # Database setup
@@ -66,10 +71,4 @@ session = Session()
 # Create tables if they don't exist
 Base.metadata.create_all(bind=engine)
 
-# Default categories
-# Only add if not exists
-default_categories = ["Emergency", "Indulgence", "Study"]
-for kitty_name in default_categories:
-    if not session.query(Category).filter_by(name=kitty_name).first():
-        session.add(Category(name=kitty_name))
-session.commit()
+
