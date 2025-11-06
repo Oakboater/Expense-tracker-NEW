@@ -1,101 +1,75 @@
-from fastapi import FastAPI
-from .database import session, Person, Expense
-from .schemas import PersonCreate, ExpenseCreate
-from sqlalchemy import func
 from datetime import datetime
-
-# RUN DATABASE WITH uvicorn app.main:app --reload
-app = FastAPI()
-
-
-
-# database
-def get_db():
-    db = session()
-    try:
-        yield db
-    finally:
-        db.close()
+from sqlalchemy import create_engine, ForeignKey, Column, Integer, String, CHAR, DateTime, Float
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
-@app.get("/")
-
-def read_roots():
-    return {"boot up complete": "Tracker API is running!"}
+# SETUP
+Base = declarative_base()
 
 
-@app.get("/people")
-def get_people():
-    people = session.query(Person).all()
-    return [
-        {
-            "ssn": p.ssn,
-            "firstname": p.firstname,
-            "lastname": p.lastname,
-            "gender": p.gender,
-            "age": p.age
-        }
-        for p in people
-    ]
+# Models
+class Person(Base):
+    __tablename__ = "person"
 
-@app.get("/totals")
-def get_totals():
-    totals = (
-        session.query(Person.firstname, func.sum(Expense.cost))
-        .join(Expense, Expense.owner == Person.ssn)
-        .group_by(Person.firstname)
-        .all()
-    )
-    return [{"person": name, "total_spent": total} for name, total in totals]
+    ssn = Column(Integer, primary_key=True, autoincrement=True)
+    firstname = Column(String, nullable=False)
+    lastname = Column(String, nullable=False)
+    gender = Column(CHAR, nullable=False)
+    age = Column(Integer, nullable=False)
+    password_hash = Column(String, nullable=False)
 
 
-@app.get("/expenses/{user_id}")
-def get_expense(user_id: int):
-    expense = session.query(Expense).filter(Expense.owner == user_id).all()
+    expenses = relationship("Expense", back_populates="person_rel")
 
-    return [
-        {
-        "Item": e.item,
-        "Cost": e.cost,
-        "date": e.date,
-        "category": e.category_rel.name if e.category_rel else None,
-        "category_id": e.category_id
-        }
-        for e in expense
-    ]
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
 
 
-@app.post("/people")
-def create_person(person: PersonCreate):
-    existing_user = session.query(Person).filter(
-        Person.firstname == person.firstname,
-        Person.lastname == person.lastname
-    ).first()
+    def check_password(self, password: str):
+        return check_password_hash(self.password_hash, password)
 
-    if existing_user:
-        return {"Error": "User already exists"}
 
-    new_person = Person(
-        firstname=person.firstname,
-        lastname=person.lastname,
-        gender=person.gender,
-        age=person.age
-    )
-    new_person.set_password(person.password)
-    session.add(new_person)
-    session.commit()
-    return {"Message": f"Person {person.firstname} added successfully"}
+    def __repr__(self):
+        return f"Person(ssn={self.ssn}, name={self.firstname} {self.lastname})"
 
-@app.post("/expenses")
-def create_expense(expense: ExpenseCreate):
-    new_expense = Expense(
-        cost=expense.cost,
-        item=expense.item,
-        owner=expense.owner,
-        category_id=expense.category_id,
-        date=datetime.now() or expense.date
-    )
-    session.add(new_expense)
-    session.commit()
-    return {"Message": f"Expense {expense.item} added successfully"}
 
+class Category(Base):
+    __tablename__ = "category"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+
+class Expense(Base):
+    __tablename__ = "expense"
+
+    tid = Column(Integer, primary_key=True, autoincrement=True)
+    item = Column(String, nullable=False)
+    cost = Column(Float, nullable=False)
+    date = Column(DateTime, default=datetime.now)
+    owner = Column(Integer, ForeignKey("person.ssn"))
+    category = Column(String)
+
+    person_rel = relationship("Person", back_populates="expenses")
+
+
+    def __repr__(self):
+        return f"Expense(tid={self.tid}, item={self.item}, cost={self.cost}, owner={self.owner})"
+
+
+# Database setup
+
+engine = create_engine("sqlite:///database.db", echo=False)  # Turn off echo in production
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Create tables if they don't exist
+Base.metadata.create_all(bind=engine)
+
+# Default categories
+# Only add if not exists
+default_categories = ["Emergency", "Indulgence", "Study"]
+for kitty_name in default_categories:
+    if not session.query(Category).filter_by(name=kitty_name).first():
+        session.add(Category(name=kitty_name))
+session.commit()
