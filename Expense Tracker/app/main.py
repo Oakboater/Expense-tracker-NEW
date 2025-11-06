@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from .database import session, Person, Expense
 from .schemas import PersonCreate, ExpenseCreate
 from sqlalchemy import func
@@ -25,8 +25,8 @@ def read_roots():
 
 
 @app.get("/people")
-def get_people():
-    people = session.query(Person).all()
+def get_people(db: session = Depends(get_db)):
+    people = db.query(Person).all()
     return [
         {
             "ssn": p.ssn,
@@ -38,20 +38,10 @@ def get_people():
         for p in people
     ]
 
-@app.get("/totals")
-def get_totals():
-    totals = (
-        session.query(Person.firstname, func.sum(Expense.cost))
-        .join(Expense, Expense.owner == Person.ssn)
-        .group_by(Person.firstname)
-        .all()
-    )
-    return [{"person": name, "total_spent": total} for name, total in totals]
-
 
 @app.get("/expenses/{user_id}")
-def get_expense(user_id: int):
-    expense = session.query(Expense).filter(Expense.owner == user_id).all()
+def get_expense(user_id: int, db: session = Depends(get_db)):
+    expense = db.query(Expense).filter(Expense.owner == user_id).all()
 
     return [
         {
@@ -66,8 +56,8 @@ def get_expense(user_id: int):
 
 
 @app.post("/people")
-def create_person(person: PersonCreate):
-    existing_user = session.query(Person).filter(
+def create_person(person: PersonCreate, db: session = Depends(get_db)):
+    existing_user = db.query(Person).filter(
         Person.firstname == person.firstname,
         Person.lastname == person.lastname
     ).first()
@@ -82,12 +72,12 @@ def create_person(person: PersonCreate):
         age=person.age
     )
     new_person.set_password(person.password)
-    session.add(new_person)
-    session.commit()
+    db.add(new_person)
+    db.commit()
     return {"Message": f"Person {person.firstname} added successfully"}
 
 @app.post("/expenses")
-def create_expense(expense: ExpenseCreate):
+def create_expense(expense: ExpenseCreate, db: session = Depends(get_db)):
     new_expense = Expense(
         cost=expense.cost,
         item=expense.item,
@@ -95,7 +85,7 @@ def create_expense(expense: ExpenseCreate):
         category_id=expense.category_id,
         date=datetime.now() or expense.date
     )
-    session.add(new_expense)
-    session.commit()
+    db.add(new_expense)
+    db.commit()
     return {"Message": f"Expense {expense.item} added successfully"}
 
