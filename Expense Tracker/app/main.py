@@ -1,8 +1,7 @@
 from typing import List
 from fastapi import FastAPI, Depends
-from .database import session, Person, Expense, Category
+from .database import Session, Person, Expense, Category
 from .schemas import PersonCreate, ExpenseCreate, ExpenseOut
-from sqlalchemy import func
 from datetime import datetime
 
 # RUN DATABASE WITH uvicorn app.main:app --reload
@@ -12,7 +11,7 @@ app = FastAPI()
 
 # database
 def get_db():
-    db = session()
+    db = Session()
     try:
         yield db
     finally:
@@ -26,7 +25,7 @@ def read_roots():
 
 
 @app.get("/people")
-def get_people(db: session = Depends(get_db)):
+def get_people(db: Session = Depends(get_db)):
     people = db.query(Person).all()
     return [
         {
@@ -41,13 +40,24 @@ def get_people(db: session = Depends(get_db)):
 
 
 @app.get("/expenses/{user_id}", response_model=List[ExpenseOut])
-def get_expense(user_id: int, db: session = Depends(get_db)):
+def get_expense(user_id: int, db: Session = Depends(get_db)):
     expense_list = db.query(Expense).filter(Expense.owner == user_id).all()
-    return expense_list
 
+    result = []
+    for e in expense_list:
+        category = db.query(Category).filter(Category.id == e.category_id).first()
+        result.append(
+            ExpenseOut(
+                item=e.item,
+                cost=e.cost,
+                date=e.date,
+                category=category.name if category else None
+            )
+        )
+    return result
 
 @app.post("/people")
-def create_person(person: PersonCreate, db: session = Depends(get_db)):
+def create_person(person: PersonCreate, db: Session = Depends(get_db)):
     existing_user = db.query(Person).filter(
         Person.firstname == person.firstname,
         Person.lastname == person.lastname
@@ -68,7 +78,7 @@ def create_person(person: PersonCreate, db: session = Depends(get_db)):
     return {"Message": f"Person {person.firstname} added successfully"}
 
 @app.post("/expenses")
-def create_expense(expense: ExpenseCreate, db: session = Depends(get_db)):
+def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
     existing_category = db.query(Category).filter(
         Category.name == expense.category,
         Category.owner == expense.owner
@@ -78,12 +88,15 @@ def create_expense(expense: ExpenseCreate, db: session = Depends(get_db)):
         category = Category(name=expense.category, owner=expense.owner)
         db.add(category)
         db.commit()
-
+        db.refresh(category)
+        final_category = category
+    else:
+        final_category = existing_category
     new_expense = Expense(
         cost=expense.cost,
         item=expense.item,
         owner=expense.owner,
-        category=expense.category,
+        category_id=final_category.id,
         date=expense.date or datetime.now()
     )
 
