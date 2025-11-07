@@ -38,10 +38,10 @@ class Category(Base):
     __tablename__ = "category"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
     owner = Column(Integer, ForeignKey("person.ssn"))
-
     expenses = relationship("Expense", back_populates="category_rel")
+
 
 class Expense(Base):
     __tablename__ = "expense"
@@ -51,8 +51,10 @@ class Expense(Base):
     cost = Column(Float, nullable=False)
     date = Column(DateTime, default=datetime.now)
     owner = Column(Integer, ForeignKey("person.ssn"))
-    category = Column(String)
+    category_id = Column(Integer, ForeignKey("category.id"))
+
     person_rel = relationship("Person", back_populates="expenses")
+    category_rel = relationship("Category", back_populates="expenses")
 
 
     def __repr__(self):
