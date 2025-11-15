@@ -1,13 +1,12 @@
 from typing import List
 from fastapi import FastAPI, Depends
-from .database import Session, Person, Expense, Category
-from .schemas import PersonCreate, ExpenseCreate, ExpenseOut
+from database import Session, Person, Expense, Category
+from schemas import PersonCreate, ExpenseCreate, ExpenseOut, Login
 from datetime import datetime
 
 # RUN DATABASE WITH uvicorn app.main:app --reload
+
 app = FastAPI()
-
-
 
 # database
 def get_db():
@@ -18,10 +17,12 @@ def get_db():
         db.close()
 
 
+
 @app.get("/")
 
 def read_roots():
     return {"boot up complete": "Tracker API is running!"}
+
 
 
 @app.get("/people")
@@ -55,6 +56,10 @@ def get_expense(user_id: int, db: Session = Depends(get_db)):
             )
         )
     return result
+
+
+
+
 
 @app.post("/people")
 def create_person(person: PersonCreate, db: Session = Depends(get_db)):
@@ -99,8 +104,26 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
         category_id=final_category.id,
         date=expense.date or datetime.now()
     )
-
     db.add(new_expense)
     db.commit()
     return {"Message": f"Expense {expense.item} added successfully"}
+
+
+@app.post("/login")
+def login(data: Login, db: Session = Depends(get_db)):
+    user = db.query(Person).filter(person.ssn == data.ssn).first()
+
+    if not user:
+            return {"Error": "User does not exist"}
+
+    if not user.checkpassword(data.password):
+            return {"Error": "Incorrect password"}
+
+    return {
+            "Message": "Login successful",
+            "ssn": user.ssn,
+            "firstname": user.firstname,
+            "lastname": user.lastname
+            }
+
 
