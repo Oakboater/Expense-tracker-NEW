@@ -29,6 +29,10 @@ class ExpenseOut(BaseModel):
     date: datetime
     category: Optional[str]
 
+class Login(BaseModel):
+    ssn: int
+    password: str
+
 
 # HELLOO MY FRIENDS!
 
