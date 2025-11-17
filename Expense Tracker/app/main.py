@@ -125,7 +125,13 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
     )
     db.add(new_expense)
     db.commit()
-    return {"Message": f"Expense {expense.item} added successfully"}
+    db.refresh(new_expense)
+    return {
+        "Message": f"Expense {new_expense.item} added successfully",
+        "expense_id": new_expense.tid,
+        "category": final_category.name
+    }
+
 
 
 @app.post("/login")
@@ -183,3 +189,11 @@ def update_expense(expense_id: int, updated: ExpenseCreate, db: Session = Depend
     expense.cost = updated.cost
 
     db.commit()
+    db.refresh(expense)
+
+    return {
+        "Message": f"Expense {expense.tid} updated successfully",
+        "item": expense.item,
+        "cost": expense.cost,
+        "date": expense.date
+    }
