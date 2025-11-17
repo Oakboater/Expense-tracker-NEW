@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import create_engine, ForeignKey, Column, Integer, String, CHAR, DateTime, Float
+from sqlalchemy import create_engine, ForeignKey, Column, Integer, String, CHAR, DateTime, Float, UniqueConstraint
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -19,16 +19,13 @@ class Person(Base):
     age = Column(Integer, nullable=False)
     password_hash = Column(String, nullable=False)
 
-
     expenses = relationship("Expense", back_populates="person_rel")
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
 
-
     def check_password(self, password: str):
         return check_password_hash(self.password_hash, password)
-
 
     def __repr__(self):
         return f"Person(ssn={self.ssn}, name={self.firstname} {self.lastname})"
@@ -36,6 +33,9 @@ class Person(Base):
 
 class Category(Base):
     __tablename__ = "category"
+    __table_args__ = (
+        UniqueConstraint("name", "owner", name="uix_user_category"),  # correct syntax
+    )
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
@@ -56,12 +56,8 @@ class Expense(Base):
     person_rel = relationship("Person", back_populates="expenses")
     category_rel = relationship("Category", back_populates="expenses")
 
-
     def __repr__(self):
         return f"Expense(tid={self.tid}, item={self.item}, cost={self.cost}, owner={self.owner})"
-    
-
-
 
 
 # Database setup
