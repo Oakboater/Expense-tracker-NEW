@@ -1,8 +1,10 @@
 from typing import List
 from fastapi import FastAPI, Depends
-from database import Session, Person, Expense, Category
-from schemas import PersonCreate, ExpenseCreate, ExpenseOut, Login
+from .database import Session, Person, Expense, Category
+from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, Login
 from datetime import datetime
+from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 
 # RUN DATABASE WITH uvicorn app.main:app --reload
 
@@ -42,22 +44,39 @@ def get_people(db: Session = Depends(get_db)):
 
 @app.get("/expenses/{user_id}", response_model=List[ExpenseOut])
 def get_expense(user_id: int, db: Session = Depends(get_db)):
-    expense_list = db.query(Expense).filter(Expense.owner == user_id).all()
+    expense_list = (
+            db.query(Expense)
+            .options(joinedload(Expense.category_rel))
+            .filter(Expense.owner == user_id)
+            .all()
+    )
 
-    result = []
-    for e in expense_list:
-        category = db.query(Category).filter(Category.id == e.category_id).first()
-        result.append(
-            ExpenseOut(
-                item=e.item,
-                cost=e.cost,
-                date=e.date,
-                category=category.name if category else None
-            )
+    result = [
+    ExpenseOut(
+        item = e.item,
+        cost = e.cost,
+        date = e.date,
+        category = e.category_rel.name if e.category_rel else None,
         )
+        for e in expense_list
+    ]
     return result
 
 
+@app.get("/summaries/{user_id}")
+def summary(user_id: int, db: Session = Depends(get_db)):
+    result = (
+        db.query(
+            Category.name,
+            func.sum(Expense.cost).label("total")
+        )
+        .join(Expense, Expense.category_id == Category.id)
+        .filter(Expense.owner == user_id)
+        .group_by(Category.name)
+        .all()
+    )
+
+    return [{"category": r[0], "total": r[1]} for r in result]
 
 
 
@@ -111,12 +130,12 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
 
 @app.post("/login")
 def login(data: Login, db: Session = Depends(get_db)):
-    user = db.query(Person).filter(person.ssn == data.ssn).first()
+    user = db.query(Person).filter(Person.ssn == data.ssn).first()
 
     if not user:
             return {"Error": "User does not exist"}
 
-    if not user.checkpassword(data.password):
+    if not user.check_password(data.password):
             return {"Error": "Incorrect password"}
 
     return {
@@ -127,3 +146,40 @@ def login(data: Login, db: Session = Depends(get_db)):
             }
 
 
+@app.delete("/categories/{user_id}/{category_name}")
+def delete_categories(user_id: int, category_name: str, db: Session = Depends(get_db)):
+
+    category = db.query(Category).filter(
+        Category.name == category_name,
+        Category.owner == user_id
+    ).first()
+
+    if not category:
+        return {"Error": "Category does not exist"}
+
+    linked_expenses = db.query(Expense).filter(
+        Expense.category_id == category.id
+    ).all()
+
+    if linked_expenses:
+        return {"Error": "Cannot delete linked category, Delete expenses first."}
+
+    db.delete(category)
+    db.commit()
+
+    return {"Message": f"Category {category_name} deleted successfully"}
+
+
+@app.patch("/expenses/{expense_id}")
+def update_expense(expense_id: int, updated: ExpenseCreate, db: Session = Depends(get_db)):
+    expense = db.query(Expense).filter(Expense.tid == expense_id).first()
+
+    if not expense:
+        return {"Error": "Expense not found"}
+
+    # else update
+
+    expense.item = updated.item
+    expense.cost = updated.cost
+
+    db.commit()
