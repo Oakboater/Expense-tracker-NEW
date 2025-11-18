@@ -43,13 +43,14 @@ def get_people(db: Session = Depends(get_db)):
 
 
 @app.get("/expenses/{user_id}", response_model=List[ExpenseOut])
-def get_expense(user_id: int, db: Session = Depends(get_db)):
-    expense_list = (
-            db.query(Expense)
-            .options(joinedload(Expense.category_rel))
-            .filter(Expense.owner == user_id)
-            .all()
-    )
+def get_expense(user_id: int, page: int = 1, limit: int = 20, sort: str = "date_desc", db: Session = Depends(get_db)):
+    order_by = Expense.date.desc()
+    query = db.query(Expense).filter(Expense.owner==user_id).order_by(order_by)
+
+    total_items = query.count()
+    total_pages = (total_items + limit - 1) // limit
+
+    expenses = query.offset((page - 1) * limit).limit(limit).all()
 
     result = [
     ExpenseOut(
@@ -58,9 +59,17 @@ def get_expense(user_id: int, db: Session = Depends(get_db)):
         date = e.date,
         category = e.category_rel.name if e.category_rel else None,
         )
-        for e in expense_list
+        for e in expenses
     ]
-    return result
+    return {
+        "metadata": {
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "current_page": page,
+            "limit": limit,
+        },
+        "data": result
+    }
 
 
 @app.get("/summaries/{user_id}")
@@ -175,6 +184,25 @@ def delete_categories(user_id: int, category_name: str, db: Session = Depends(ge
 
     return {"Message": f"Category {category_name} deleted successfully"}
 
+@app.get("/categories/{user_id}")
+def get_categories(user_id: int,     db: Session = Depends(get_db)):
+    cats = db.query(Category).filter(Category).filter(Category.owner == user_id).all()
+    return [{"id": c.id, "name": c.name} for c in cats]
+
+
+@app.delete("/expenses/{user_id}/{expense_id}")
+def delete_expense(user_id: int, expense_id: int, db: Session = Depends(get_db)):
+
+    expense = db.query(Expense).filter(
+        Expense.tid == expense_id,
+        Expense.owner == user_id
+    ).first()
+
+    if not expense:
+        return {"Error": "Expense does not exist"}
+    db.delete(expense)
+    db.commit()
+    return {"Message": f"Expense {expense_id} deleted successfully"}
 
 @app.patch("/expenses/{expense_id}")
 def update_expense(expense_id: int, updated: ExpenseCreate, db: Session = Depends(get_db)):
