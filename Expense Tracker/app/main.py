@@ -1,12 +1,14 @@
 from typing import List
 from fastapi import FastAPI, Depends
 from .database import Session, Person, Expense, Category
-from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, Login
+from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, Login, Metadata, PaginatedResponse
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
+from .utils import get_sort_options
 
-# RUN DATABASE WITH uvicorn app.main:app --reload
+# RUN DATABASE WITH
+
 
 app = FastAPI()
 
@@ -42,10 +44,10 @@ def get_people(db: Session = Depends(get_db)):
     ]
 
 
-@app.get("/expenses/{user_id}", response_model=List[ExpenseOut])
+@app.get("/expenses/{user_id}", response_model=PaginatedResponse[ExpenseOut])
 def get_expense(user_id: int, page: int = 1, limit: int = 20, sort: str = "date_desc", db: Session = Depends(get_db)):
-    order_by = Expense.date.desc()
-    query = db.query(Expense).filter(Expense.owner==user_id).order_by(order_by)
+    order_by = get_sort_options(sort)
+    query = db.query(Expense).filter(Expense.owner == user_id).order_by(order_by)
 
     total_items = query.count()
     total_pages = (total_items + limit - 1) // limit
@@ -53,14 +55,16 @@ def get_expense(user_id: int, page: int = 1, limit: int = 20, sort: str = "date_
     expenses = query.offset((page - 1) * limit).limit(limit).all()
 
     result = [
-    ExpenseOut(
-        item = e.item,
-        cost = e.cost,
-        date = e.date,
-        category = e.category_rel.name if e.category_rel else None,
+        ExpenseOut(
+            tid=e.tid,
+            item=e.item,
+            cost=e.cost,
+            date=e.date,
+            category=e.category_rel.name if e.category_rel else None,
         )
         for e in expenses
     ]
+
     return {
         "metadata": {
             "total_items": total_items,
@@ -70,7 +74,6 @@ def get_expense(user_id: int, page: int = 1, limit: int = 20, sort: str = "date_
         },
         "data": result
     }
-
 
 @app.get("/summaries/{user_id}")
 def summary(user_id: int, db: Session = Depends(get_db)):
@@ -87,7 +90,24 @@ def summary(user_id: int, db: Session = Depends(get_db)):
 
     return [{"category": r[0], "total": r[1]} for r in result]
 
+@app.get("/categories/{user_id}")
+def get_categories(user_id: int, page: int = 1, limit: int = 20, db: Session = Depends(get_db)):
+    query = db.query(Category).filter(Category.owner == user_id)
 
+    total_items = query.count()
+    total_pages = (total_items + limit - 1) // limit
+
+    categories = query.offset((page - 1) * limit).limit(limit).all()
+
+    return {
+        "metadata": {
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "current_page": page,
+            "limit": limit,
+        },
+        "data": [{"id": c.id, "name": c.name} for c in categories]
+    }
 
 @app.post("/people")
 def create_person(person: PersonCreate, db: Session = Depends(get_db)):
@@ -184,10 +204,7 @@ def delete_categories(user_id: int, category_name: str, db: Session = Depends(ge
 
     return {"Message": f"Category {category_name} deleted successfully"}
 
-@app.get("/categories/{user_id}")
-def get_categories(user_id: int,     db: Session = Depends(get_db)):
-    cats = db.query(Category).filter(Category).filter(Category.owner == user_id).all()
-    return [{"id": c.id, "name": c.name} for c in cats]
+
 
 
 @app.delete("/expenses/{user_id}/{expense_id}")
