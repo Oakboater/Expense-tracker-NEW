@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List, Generic, TypeVar
+from typing import Optional
 
 T = TypeVar('T')
 # Person schema
@@ -47,5 +48,10 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 # HELLOO MY FRIENDS!
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
+class TokenData(BaseModel):
+    ssn: Optional[int] = None
 
