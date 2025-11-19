@@ -1,7 +1,9 @@
 from typing import List
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from .auth import create_access_token, get_current_user
 from .database import Session, Person, Expense, Category
-from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, Login, Metadata, PaginatedResponse
+from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, Login, Metadata, PaginatedResponse, Token
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
@@ -27,6 +29,30 @@ def get_db():
 def read_roots():
     return {"boot up complete": "Tracker API is running!"}
 
+
+# imports at top of main.py
+from fastapi.security import OAuth2PasswordRequestForm
+from .auth import create_access_token, get_current_user
+from .schemas import Token
+
+# Add route to issue token
+@app.post("/token", response_model=Token)
+def token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # OAuth2PasswordRequestForm provides username & password fields (username is string)
+    # We'll accept username as the user's ssn or firstname? Use ssn for clarity.
+    # The client should send username=ssn (as string) and password.
+    try:
+        ssn = int(form_data.username)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="username must be numeric ssn")
+
+    user = db.query(Person).filter(Person.ssn == ssn).first()
+    if not user or not user.check_password(form_data.password):
+        raise HTTPException(status_code=401, detail="Incorrect credentials")
+
+    token_data = {"sub": user.ssn}
+    access_token = create_access_token(token_data)
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.get("/people")
