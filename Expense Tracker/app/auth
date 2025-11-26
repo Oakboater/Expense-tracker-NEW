@@ -81,12 +81,14 @@ def get_current_user(
 ) -> Person:
     payload = verify_token(token)
 
-    ssn = payload.get("sub")
-    if ssn is None:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+    try:
+        ssn = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid token subject")
 
     user = db.query(Person).filter(Person.ssn == ssn).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     return user
+
