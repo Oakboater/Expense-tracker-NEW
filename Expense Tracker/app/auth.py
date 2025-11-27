@@ -8,14 +8,16 @@ from sqlalchemy.orm import Session
 
 from .database import Session as DBSession, Person
 
+# JWT Settings
 SECRET_KEY = "Hello World"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")  # Fixed: must match token endpoint
+# OAuth2 scheme
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
-
+# Token creation
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
@@ -29,7 +31,7 @@ def create_refresh_token(data: dict) -> str:
     to_encode.update({"exp": int(expires.timestamp()), "type": "refresh"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-
+# Token verification
 def verify_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -54,6 +56,7 @@ def verify_refresh_token(token: str) -> dict:
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Invalid or expired refresh token")
+# Database dependency
 
 
 def get_db():
@@ -63,7 +66,7 @@ def get_db():
     finally:
         db.close()
 
-
+# Current user dependency
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Person:
     payload = verify_token(token)
     try:
