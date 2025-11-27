@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -6,8 +6,8 @@ from sqlalchemy import literal
 
 from .database import Session as DBSession, Person, Expense, Category
 from .auth import create_access_token, get_current_user, create_refresh_token, verify_refresh_token
-from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, PaginatedResponse, Token
-from .utils import get_sort_options
+from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, PaginatedResponse, Token, PersonUpdate
+from .utils import get_sort_options, get_financial_summary
 
 
 app = FastAPI()  # RUN DATABASE WITH uvicorn app.main:app --reload
@@ -78,6 +78,15 @@ def get_my_expenses(
     }
 
 
+@app.get("/me/summary")
+def financial_summary(
+    days: int = Query(30, ge=1),
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    summary = get_financial_summary(db, current_user.ssn, days=days)
+    return summary
+
 @app.get("/me/categories")
 def get_my_categories(
     page: int = 1,
@@ -118,6 +127,37 @@ def get_people(db: Session = Depends(get_db)):
         for p in people
     ]
 
+from sqlalchemy import func
+
+@app.get("/me/summary/monthly")
+def monthly_summary(
+    month: int,  # 1-12
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    # Filter expenses by user and month
+    expenses = db.query(
+        Expense.category_id,
+        func.sum(Expense.cost).label("total")
+    ).filter(
+        Expense.owner == current_user.ssn,
+        func.extract('year', Expense.date) == year,
+        func.extract('month', Expense.date) == month
+    ).group_by(Expense.category_id).all()
+
+    result = [{"category": db.query(Category).get(cat_id).name, "total": total} for cat_id, total in expenses]
+
+    total_expense = sum([r["total"] for r in result])
+
+    return {
+        "month": month,
+        "year": year,
+        "total_expense": total_expense,
+        "by_category": result
+    }
+
+
 @app.post("/token", response_model=Token)
 def token(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -133,7 +173,7 @@ def token(
     if not user or not user.check_password(form_data.password):
         raise HTTPException(status_code=401, detail="Incorrect credentials")
 
-    token_data = {"sub": user.ssn}
+    token_data = {"sub": str(user.ssn)}
     access_token = create_access_token(data=token_data)
     refresh_token = create_refresh_token(token_data)
     return {
@@ -250,6 +290,39 @@ def update_expense(
         "date": expense.date,
     }
 
+@app.patch("/me")
+def update_me(
+    updated: PersonUpdate,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    user = current_user
+
+    if updated.firstname is not None:
+        user.firstname = updated.firstname
+    if updated.lastname is not None:
+        user.lastname = updated.lastname
+    if updated.gender is not None:
+        user.gender = updated.gender
+    if updated.age is not None:
+        user.age = updated.age
+    if updated.password is not None:
+        user.set_password(updated.password)  # make sure you hash the password
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "Message": "Profile updated successfully",
+        "user": {
+            "ssn": user.ssn,
+            "firstname": user.firstname,
+            "lastname": user.lastname,
+            "gender": user.gender,
+            "age": user.age,
+        }
+    }
+
 
 @app.delete("/expenses/{expense_id}")
 def delete_expense(
@@ -270,5 +343,22 @@ def delete_expense(
     db.commit()
 
     return {"Message": f"Expense {expense_id} deleted successfully"}
+
+
+@app.delete("/me")
+def delete_me(
+        db: Session = Depends(get_db),
+        current_user: Person = Depends(get_current_user)
+):
+
+    db.query(Expense).filter(Expense.owner == current_user.ssn).delete()
+
+    db.query(Category).filter(Category.owner == current_user.ssn).delete()
+
+    db.delete(current_user)
+    db.commit()
+
+    return {"Message": "Your account and all related data have been deleted successfully"}
+
 
 
