@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List, Generic, TypeVar
-from typing import Optional
 
 T = TypeVar('T')
+
+
 # Person schema
+
 class PersonCreate(BaseModel):
     firstname: str
     lastname: str
@@ -12,15 +14,22 @@ class PersonCreate(BaseModel):
     age: int
     password: str
 
+class PersonUpdate(BaseModel):
+    firstname: Optional[str]
+    lastname: Optional[str]
+    gender: Optional[str]
+    age: Optional[int]
+    password: Optional[str]
+
 
 # Expense schema
 
 class ExpenseCreate(BaseModel):
     item: str
     cost: float
-    owner: int
     category: str
     date: Optional[datetime] = None
+
 
 
 # Response Models
@@ -32,9 +41,13 @@ class ExpenseOut(BaseModel):
     date: datetime
     category: Optional[str]
 
+
 class Login(BaseModel):
     ssn: int
     password: str
+
+
+# Pagination Models
 
 class Metadata(BaseModel):
     total_items: int
@@ -42,16 +55,17 @@ class Metadata(BaseModel):
     current_page: int
     limit: int
 
+
 class PaginatedResponse(BaseModel, Generic[T]):
     metadata: Metadata
     data: List[T]
 
-# HELLOO MY FRIENDS!
+
+# JWT Token Response
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 class TokenData(BaseModel):
-    ssn: Optional[int] = None
-
+    sub: int
