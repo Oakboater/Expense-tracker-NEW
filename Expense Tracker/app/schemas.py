@@ -30,6 +30,41 @@ class ExpenseCreate(BaseModel):
     category: str
     date: Optional[datetime] = None
 
+class IncomeCreate(BaseModel):
+    amount: float
+    source: str
+    date: datetime | None = None
+
+
+class IncomeOut(BaseModel):
+    id: int
+    amount: float
+    source: str
+    date: datetime
+
+    class Config:
+        orm_mode = True
+
+class BudgetCreate(BaseModel):
+    category: str
+    limit: float
+    period: str = "monthly"
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+
+
+class BudgetOut(BaseModel):
+    id: int
+    category: str
+    limit: float
+    period: str
+    start_date: datetime | None
+    end_date: datetime | None
+
+    class Config:
+        orm_mode = True
+
+
 
 
 # Response Models
@@ -69,3 +104,5 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     sub: int
+
+
