@@ -20,6 +20,8 @@ class Person(Base):
     password_hash = Column(String, nullable=False)
 
     expenses = relationship("Expense", back_populates="person_rel")
+    income_rel = relationship("Income", back_populates="owner_rel")
+    budget_rel = relationship("Budget", back_populates="owner_rel")
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -58,6 +60,31 @@ class Expense(Base):
 
     def __repr__(self):
         return f"Expense(tid={self.tid}, item={self.item}, cost={self.cost}, owner={self.owner})"
+
+class Income(Base):
+    __tablename__ = "income"
+
+    id = Column(Integer, primary_key=True, index=True)
+    amount = Column(Float, nullable=False)
+    source = Column(String(100), nullable=False)
+    date = Column(DateTime, default=datetime.now)
+    owner = Column(Integer, ForeignKey("person.ssn"), nullable=False)
+
+    owner_rel = relationship("Person", back_populates="income_rel")
+
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String(100), nullable=False)
+    limit = Column(Float, nullable=False)
+    period = Column(String(20), default="monthly")  # daily, weekly, monthly, custom
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    owner = Column(Integer, ForeignKey("person.ssn"), nullable=False)
+
+    owner_rel = relationship("Person", back_populates="budget_rel")
 
 
 # Database setup
