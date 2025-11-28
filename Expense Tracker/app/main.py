@@ -4,9 +4,9 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import literal
 
-from .database import Session as DBSession, Person, Expense, Category
+from .database import Session as DBSession, Person, Expense, Category, Income, Budget
 from .auth import create_access_token, get_current_user, create_refresh_token, verify_refresh_token
-from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, PaginatedResponse, Token, PersonUpdate
+from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, PaginatedResponse, Token, PersonUpdate, IncomeOut, IncomeCreate, BudgetCreate, BudgetOut
 from .utils import get_sort_options, get_financial_summary
 
 
@@ -112,6 +112,31 @@ def get_my_categories(
         "data": [{"id": c.id, "name": c.name} for c in categories],
     }
 
+@app.get("/me/income", response_model=list[IncomeOut])
+def get_my_income(
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    income = (
+        db.query(Income)
+        .filter(Income.owner == current_user.ssn)
+        .order_by(Income.date.desc())
+        .all()
+    )
+    return income
+
+@app.get("/me/budgets", response_model=list[BudgetOut])
+def get_my_budgets(
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    budgets = db.query(Budget).filter(
+        Budget.owner == current_user.ssn
+    ).all()
+
+    return budgets
+
+
 
 @app.get("/people")
 def get_people(db: Session = Depends(get_db)):
@@ -182,6 +207,29 @@ def token(
         "token_type": "bearer"
     }
 
+@app.post("/income")
+def create_income(
+    income: IncomeCreate,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    new_income = Income(
+        amount=income.amount,
+        source=income.source,
+        date=income.date or datetime.now(),
+        owner=current_user.ssn
+    )
+
+    db.add(new_income)
+    db.commit()
+    db.refresh(new_income)
+
+    return {
+        "message": "Income added successfully",
+        "id": new_income.id,
+        "source": new_income.source,
+        "amount": new_income.amount
+    }
 
 
 @app.post("/refresh")
@@ -261,6 +309,28 @@ def create_expense(
     }
 
 
+@app.post("/budgets")
+def create_budget(
+    budget: BudgetCreate,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    new_budget = Budget(
+        category=budget.category,
+        limit=budget.limit,
+        period=budget.period,
+        start_date=budget.start_date,
+        end_date=budget.end_date,
+        owner=current_user.ssn
+    )
+
+    db.add(new_budget)
+    db.commit()
+    db.refresh(new_budget)
+
+    return {"message": "Budget created", "id": new_budget.id}
+
+
 @app.patch("/expenses/{expense_id}")
 def update_expense(
     expense_id: int,
@@ -289,6 +359,33 @@ def update_expense(
         "cost": expense.cost,
         "date": expense.date,
     }
+
+
+@app.patch("/budgets/{budget_id}")
+def update_budget(
+    budget_id: int,
+    updated: BudgetCreate,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    budget = db.query(Budget).filter(
+        Budget.id == budget_id,
+        Budget.owner == current_user.ssn
+    ).first()
+
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+
+    budget.category = updated.category
+    budget.limit = updated.limit
+    budget.period = updated.period
+    budget.start_date = updated.start_date
+    budget.end_date = updated.end_date
+
+    db.commit()
+    db.refresh(budget)
+
+    return {"message": "Budget updated"}
 
 @app.patch("/me")
 def update_me(
@@ -323,6 +420,31 @@ def update_me(
         }
     }
 
+@app.patch("/income/{income_id}")
+def update_income(
+    income_id: int,
+    updated: IncomeCreate,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    income = db.query(Income).filter(
+        Income.id == income_id,
+        Income.owner == current_user.ssn
+    ).first()
+
+    if not income:
+        raise HTTPException(status_code=404, detail="Income not found")
+
+    income.amount = updated.amount
+    income.source = updated.source
+    income.date = updated.date or income.date
+
+    db.commit()
+    db.refresh(income)
+
+    return {"message": "Income updated successfully"}
+
+
 
 @app.delete("/expenses/{expense_id}")
 def delete_expense(
@@ -344,6 +466,43 @@ def delete_expense(
 
     return {"Message": f"Expense {expense_id} deleted successfully"}
 
+@app.delete("/income/{income_id}")
+def delete_income(
+    income_id: int,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    income = db.query(Income).filter(
+        Income.id == income_id,
+        Income.owner == current_user.ssn
+    ).first()
+
+    if not income:
+        raise HTTPException(status_code=404, detail="Income not found")
+
+    db.delete(income)
+    db.commit()
+
+    return {"message": "Income deleted successfully"}
+
+@app.delete("/budgets/{budget_id}")
+def delete_budget(
+    budget_id: int,
+    db: Session = Depends(get_db),
+    current_user: Person = Depends(get_current_user)
+):
+    budget = db.query(Budget).filter(
+        Budget.id == budget_id,
+        Budget.owner == current_user.ssn
+    ).first()
+
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+
+    db.delete(budget)
+    db.commit()
+
+    return {"message": "Budget deleted"}
 
 @app.delete("/me")
 def delete_me(
