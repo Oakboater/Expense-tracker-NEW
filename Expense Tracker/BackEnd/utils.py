@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from .database import Expense
+from database import Expense
 
 
 def get_sort_options(sort: str):

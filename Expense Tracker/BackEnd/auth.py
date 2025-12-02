@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
-from .database import Session as DBSession, Person
+from database import Session as DBSession, Person
 
 # JWT Settings
 SECRET_KEY = "Hello World"

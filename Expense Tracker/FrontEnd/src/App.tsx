@@ -1,44 +1,74 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Dashboard from './pages/Dashboard'
+import ExpensesPage from './pages/ExpensesPage'
+import CategoriesManager from './components/CategoriesManager'
+import ProtectedRoute from './components/ProtectedRoute'
+import './App.css' // We'll create this
 
-export default function App() {
-  const [count, setCount] = useState(0);
+// Placeholder pages for now - RENAMED to avoid conflicts
+const IncomePagePlaceholder = () => (
+  <div style={{ padding: '24px' }}>
+    <h1>Income Page</h1>
+    <p>Coming soon...</p>
+  </div>
+)
 
+const CategoriesPagePlaceholder = () => (
+  <div style={{ padding: '24px' }}>
+    <h1>Categories Page</h1>
+    <p>Coming soon...</p>
+  </div>
+)
+
+const ProfilePagePlaceholder = () => (
+  <div style={{ padding: '24px' }}>
+    <h1>Profile Page</h1>
+    <p>Coming soon...</p>
+  </div>
+)
+
+function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      {/* Optional: keep your Vite starter UI below for testing */}
-      <div className="starter-ui">
-        <div>
-          <a href="https://vite.dev" target="_blank">
-            <img src={viteLogo} className="logo" alt="Vite logo" />
-          </a>
-          <a href="https://react.dev" target="_blank">
-            <img src={reactLogo} className="logo react" alt="React logo" />
-          </a>
-        </div>
-        <h1>Vite + React</h1>
-        <div className="card">
-          <button onClick={() => setCount((count) => count + 1)}>
-            count is {count}
-          </button>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test HMR
-          </p>
-        </div>
-        <p className="read-the-docs">
-          Click on the Vite and React logos to learn more
-        </p>
-      </div>
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/expenses" element={
+          <ProtectedRoute>
+            <ExpensesPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/income" element={
+          <ProtectedRoute>
+            <IncomePagePlaceholder />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/categories" element={
+          <ProtectedRoute>
+            <CategoriesPagePlaceholder />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <ProfilePagePlaceholder />
+          </ProtectedRoute>
+        } />
+      </Routes>
     </BrowserRouter>
-  );
+  )
 }
+
+export default App

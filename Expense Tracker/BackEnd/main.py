@@ -4,14 +4,26 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import literal
 
-from .database import Session as DBSession, Person, Expense, Category, Income, Budget
-from .auth import create_access_token, get_current_user, create_refresh_token, verify_refresh_token
-from .schemas import PersonCreate, ExpenseCreate, ExpenseOut, PaginatedResponse, Token, PersonUpdate, IncomeOut, IncomeCreate, BudgetCreate, BudgetOut
-from .utils import get_sort_options, get_financial_summary
-
+from database import Session as DBSession, Person, Expense, Category, Income, Budget
+from auth import create_access_token, get_current_user, create_refresh_token, verify_refresh_token
+from schemas import PersonCreate, ExpenseCreate, ExpenseOut, PaginatedResponse, Token, PersonUpdate, IncomeOut, IncomeCreate, BudgetCreate, BudgetOut
+from utils import get_sort_options, get_financial_summary
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()  # RUN DATABASE WITH uvicorn app.main:app --reload
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",  # Vite default
+        "http://127.0.0.1:5173"   # Vite default
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Database dependency
 def get_db():
     db = DBSession()
