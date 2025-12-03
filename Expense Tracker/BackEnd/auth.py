@@ -11,7 +11,7 @@ from database import Session as DBSession, Person
 # JWT Settings
 SECRET_KEY = "Hello World"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # OAuth2 scheme
@@ -56,9 +56,8 @@ def verify_refresh_token(token: str) -> dict:
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Invalid or expired refresh token")
+
 # Database dependency
-
-
 def get_db():
     db = DBSession()
     try:
@@ -70,11 +69,11 @@ def get_db():
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Person:
     payload = verify_token(token)
     try:
-        ssn = int(payload.get("sub"))
+        user_id = int(payload.get("sub"))
     except (TypeError, ValueError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject")
 
-    user = db.query(Person).filter(Person.ssn == ssn).first()  # type: ignore
+    user = db.query(Person).filter(Person.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 

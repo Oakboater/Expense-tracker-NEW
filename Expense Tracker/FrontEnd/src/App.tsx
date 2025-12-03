@@ -3,31 +3,11 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import ExpensesPage from './pages/ExpensesPage'
-import CategoriesManager from './components/CategoriesManager'
+import IncomePage from './pages/IncomePage'
+import BudgetsPage from './pages/BudgetsPage'
+import ReportsPage from './pages/ReportsPage'
+import ProfilesPage from "./pages/ProfilesPage";
 import ProtectedRoute from './components/ProtectedRoute'
-import './App.css' // We'll create this
-
-// Placeholder pages for now - RENAMED to avoid conflicts
-const IncomePagePlaceholder = () => (
-  <div style={{ padding: '24px' }}>
-    <h1>Income Page</h1>
-    <p>Coming soon...</p>
-  </div>
-)
-
-const CategoriesPagePlaceholder = () => (
-  <div style={{ padding: '24px' }}>
-    <h1>Categories Page</h1>
-    <p>Coming soon...</p>
-  </div>
-)
-
-const ProfilePagePlaceholder = () => (
-  <div style={{ padding: '24px' }}>
-    <h1>Profile Page</h1>
-    <p>Coming soon...</p>
-  </div>
-)
 
 function App() {
   return (
@@ -51,19 +31,25 @@ function App() {
 
         <Route path="/income" element={
           <ProtectedRoute>
-            <IncomePagePlaceholder />
+            <IncomePage />
           </ProtectedRoute>
         } />
 
-        <Route path="/categories" element={
+        <Route path="/budgets" element={
           <ProtectedRoute>
-            <CategoriesPagePlaceholder />
+            <BudgetsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/reports" element={
+          <ProtectedRoute>
+            <ReportsPage />
           </ProtectedRoute>
         } />
 
         <Route path="/profile" element={
           <ProtectedRoute>
-            <ProfilePagePlaceholder />
+            <ProfilesPage />  {/* ← FIXED: Changed to ProfilesPage */}
           </ProtectedRoute>
         } />
       </Routes>

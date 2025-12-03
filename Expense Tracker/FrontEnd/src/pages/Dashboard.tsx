@@ -4,10 +4,9 @@ import Layout from "../components/Layout";
 import AddExpenseForm from "../components/AddExpenseForm";
 import AddIncomeForm from "../components/AddIncomeForm";
 import CategoriesManager from "../components/CategoriesManager";
-import "../App.css";
 
 interface Expense {
-  tid: number;
+  id: number;
   item: string;
   cost: number;
   date: string;
@@ -40,124 +39,121 @@ export default function Dashboard() {
       setExpenses(e.data);
     } catch (err) {
       console.error(err);
-      alert("Failed to load dashboard. Make sure you are logged in.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <Layout><div className="card text-center"><div className="spinner"></div><p>Loading...</p></div></Layout>;
+  if (loading) return (
+    <Layout title="Dashboard">
+      <div className="loading-state">
+        <div className="spinner"></div>
+        <p>Loading dashboard...</p>
+      </div>
+    </Layout>
+  );
 
   return (
     <Layout title="Dashboard">
-      {/* Quick Stats */}
+      <div className="dashboard-header">
+        <h2>Financial Overview</h2>
+        <p>Track your income, expenses, and net balance</p>
+      </div>
+
       <div className="stats-grid">
         <div className="stat-card income">
-          <div className="text-lg">💰</div>
-          <h3 className="font-semibold text-gray-600">Total Income</h3>
-          <div className="stat-value text-green-600">
-            ${summary?.total_income?.toFixed(2) || "0.00"}
+          <div className="stat-icon">💰</div>
+          <div className="stat-content">
+            <div className="stat-label">Total Income</div>
+            <div className="stat-value">${summary?.total_income?.toFixed(2) || "0.00"}</div>
           </div>
         </div>
 
         <div className="stat-card expense">
-          <div className="text-lg">💸</div>
-          <h3 className="font-semibold text-gray-600">Total Expenses</h3>
-          <div className="stat-value text-red-600">
-            ${summary?.total_expenses?.toFixed(2) || "0.00"}
+          <div className="stat-icon">💸</div>
+          <div className="stat-content">
+            <div className="stat-label">Total Expenses</div>
+            <div className="stat-value">${summary?.total_expenses?.toFixed(2) || "0.00"}</div>
           </div>
         </div>
 
         <div className="stat-card net">
-          <div className="text-lg">📈</div>
-          <h3 className="font-semibold text-gray-600">Net Balance</h3>
-          <div className={`stat-value ${(summary?.net || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            ${summary?.net?.toFixed(2) || "0.00"}
+          <div className="stat-icon">📈</div>
+          <div className="stat-content">
+            <div className="stat-label">Net Balance</div>
+            <div className={`stat-value ${(summary?.net || 0) >= 0 ? 'positive' : 'negative'}`}>
+              ${summary?.net?.toFixed(2) || "0.00"}
+            </div>
           </div>
         </div>
 
         <div className="stat-card period">
-          <div className="text-lg">📅</div>
-          <h3 className="font-semibold text-gray-600">Time Period</h3>
-          <div className="stat-value">
-            {summary?.days || 30} days
+          <div className="stat-icon">📅</div>
+          <div className="stat-content">
+            <div className="stat-label">Time Period</div>
+            <div className="stat-value">{summary?.days || 30} days</div>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <button
-          onClick={() => setActiveTab('addExpense')}
-          className="btn btn-danger"
-        >
-          <span>➕</span> Add Expense
-        </button>
-
-        <button
-          onClick={() => setActiveTab('addIncome')}
-          className="btn btn-success"
-        >
-          <span>💰</span> Add Income
-        </button>
-
-        <button
-          onClick={() => setActiveTab('categories')}
-          className="btn btn-primary"
-        >
-          <span>🏷️</span> Manage Categories
-        </button>
-
+      <div className="dashboard-tabs">
         <button
           onClick={() => setActiveTab('summary')}
-          className="btn btn-secondary"
+          className={`tab-button ${activeTab === 'summary' ? 'active' : ''}`}
         >
-          <span>📊</span> View Summary
+          📋 Recent Expenses
+        </button>
+        <button
+          onClick={() => setActiveTab('addExpense')}
+          className={`tab-button ${activeTab === 'addExpense' ? 'active' : ''}`}
+        >
+          ➕ Add Expense
+        </button>
+        <button
+          onClick={() => setActiveTab('addIncome')}
+          className={`tab-button ${activeTab === 'addIncome' ? 'active' : ''}`}
+        >
+          💰 Add Income
+        </button>
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`tab-button ${activeTab === 'categories' ? 'active' : ''}`}
+        >
+          🏷️ Manage Categories
         </button>
       </div>
 
-      {/* Content Area */}
-      <div className="card">
+      <div className="tab-content">
         {activeTab === 'summary' && (
-          <div>
-            <h2 className="card-header">
-              <span style={{ marginRight: '8px' }}>📋</span> Recent Expenses
-            </h2>
-
+          <div className="expenses-table">
+            <h3>Recent Expenses</h3>
             {expenses.length === 0 ? (
-              <div className="text-center p-6 text-gray-600">
-                <p className="text-lg mb-2">No expenses recorded yet</p>
-                <p>Add your first expense using the "Add Expense" button above!</p>
+              <div className="empty-state">
+                <p>No expenses recorded yet. Add your first expense!</p>
               </div>
             ) : (
-              <div className="table-container">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Item</th>
-                      <th>Category</th>
-                      <th>Cost</th>
-                      <th>Date</th>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Cost</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map((exp) => (
+                    <tr key={exp.id}>
+                      <td>{exp.item}</td>
+                      <td>
+                        <span className="category-tag">{exp.category || "Uncategorized"}</span>
+                      </td>
+                      <td className="amount-cell">${exp.cost.toFixed(2)}</td>
+                      <td>{new Date(exp.date).toLocaleDateString()}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {expenses.map((exp) => (
-                      <tr key={exp.tid}>
-                        <td>{exp.item}</td>
-                        <td>
-                          <span className="tag">
-                            {exp.category || "Uncategorized"}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>${exp.cost.toFixed(2)}</td>
-                        <td style={{ color: '#6b7280' }}>
-                          {new Date(exp.date).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         )}

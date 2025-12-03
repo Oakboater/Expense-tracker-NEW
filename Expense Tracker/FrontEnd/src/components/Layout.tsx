@@ -1,7 +1,6 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { authApi } from '../api/client'
-import '../App.css'
 
 interface LayoutProps {
   children: ReactNode
@@ -12,6 +11,19 @@ export default function Layout({ children, title = 'Expense Tracker' }: LayoutPr
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await authApi.getCurrentUser()
+        setUser(data)
+      } catch (err) {
+        console.error("Failed to fetch user:", err)
+      }
+    }
+    fetchUser()
+  }, [])
 
   const handleLogout = () => {
     authApi.logout()
@@ -22,7 +34,6 @@ export default function Layout({ children, title = 'Expense Tracker' }: LayoutPr
     { path: '/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/expenses', label: 'Expenses', icon: '💰' },
     { path: '/income', label: 'Income', icon: '💵' },
-    { path: '/categories', label: 'Categories', icon: '🏷️' },
     { path: '/budgets', label: 'Budgets', icon: '🎯' },
     { path: '/reports', label: 'Reports', icon: '📈' },
     { path: '/profile', label: 'Profile', icon: '👤' },
@@ -36,11 +47,20 @@ export default function Layout({ children, title = 'Expense Tracker' }: LayoutPr
           <h1>💰 Expense Tracker</h1>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="btn-outline"
-            style={{ padding: '4px 8px', fontSize: '1rem' }}
+            className="close-sidebar"
           >
             ✕
           </button>
+        </div>
+
+        <div className="user-info">
+          <div className="user-avatar">
+            {user?.profile_emoji || '👤'}
+          </div>
+          <div className="user-details">
+            <div className="user-name">{user?.firstname} {user?.lastname}</div>
+            <div className="user-username">@{user?.username}</div>
+          </div>
         </div>
 
         <nav className="sidebar-nav">
@@ -49,22 +69,20 @@ export default function Layout({ children, title = 'Expense Tracker' }: LayoutPr
               key={item.path}
               to={item.path}
               className={`sidebar-link ${location.pathname === item.path ? 'active' : ''}`}
+              onClick={() => setSidebarOpen(false)}
             >
               <span className="sidebar-icon">{item.icon}</span>
               {item.label}
             </Link>
           ))}
 
-          <div style={{ marginTop: 'auto' }}>
-            <button
-              onClick={handleLogout}
-              className="sidebar-link"
-              style={{ color: '#dc2626' }}
-            >
-              <span className="sidebar-icon">🚪</span>
-              Logout
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="logout-button"
+          >
+            <span className="logout-icon">🚪</span>
+            Logout
+          </button>
         </nav>
       </div>
 
@@ -74,31 +92,25 @@ export default function Layout({ children, title = 'Expense Tracker' }: LayoutPr
         <header className="top-bar">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="btn-outline"
-            style={{ padding: '8px 12px' }}
+            className="menu-toggle"
           >
             ☰
           </button>
 
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600">Welcome!</span>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              backgroundColor: '#dbeafe',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <span style={{ color: '#2563eb' }}>👤</span>
+          <h1 className="page-title">{title}</h1>
+
+          <div className="user-menu">
+            <div className="current-user">
+              <span className="user-greeting">Hello, {user?.firstname}</span>
+              <div className="user-avatar-small">
+                {user?.profile_emoji || '👤'}
+              </div>
             </div>
           </div>
         </header>
 
         {/* Page content */}
         <main className="content">
-          {title && <h1 className="text-2xl font-bold mb-6">{title}</h1>}
           {children}
         </main>
       </div>

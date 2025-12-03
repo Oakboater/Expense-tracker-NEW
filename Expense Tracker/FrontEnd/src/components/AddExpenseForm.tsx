@@ -153,3 +153,5 @@ export default function AddExpenseForm({ onSuccess }: { onSuccess?: () => void }
     </div>
   );
 }
+
+
